@@ -34,6 +34,9 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
+#include <errno.h>
+#include <sys/ioctl.h>
+#include <linux/unistd.h>
 
 #include "tcti.h"
 #include "tcti/tcti_device.h"
@@ -180,6 +183,14 @@ tcti_device_get_poll_handles (
     return TSS2_TCTI_RC_NOT_IMPLEMENTED;
 }
 
+#define TPM_IOC_TYPE 0xFE
+
+#define TPM_IOC_SET_LOCALITY_NR 0x20
+#define TPM_IOC_GET_LOCALITY_NR 0x21
+
+#define TPM_IOC_SET_LOCALITY _IOW(TPM_IOC_TYPE, TPM_IOC_SET_LOCALITY_NR, unsigned long)
+#define TPM_IOC_GET_LOCALITY _IOR(TPM_IOC_TYPE, TPM_IOC_GET_LOCALITY_NR, unsigned long)
+
 TSS2_RC
 tcti_device_set_locality (
     TSS2_TCTI_CONTEXT *tctiContext,
@@ -189,7 +200,21 @@ tcti_device_set_locality (
      * Linux driver doesn't expose a mechanism for user space applications
      * to set locality.
      */
-    return TSS2_TCTI_RC_NOT_IMPLEMENTED;
+
+    TSS2_TCTI_CONTEXT_INTEL *tcti_intel = tcti_context_intel_cast (tctiContext);
+    TSS2_RC rc;
+
+    rc = tcti_common_checks (tctiContext);
+    if (rc != TSS2_RC_SUCCESS) {
+        return TSS2_TCTI_RC_IO_ERROR;
+    }
+
+    if (ioctl(tcti_intel->devFile, TPM_IOC_SET_LOCALITY, locality) < 0) {
+        LOG_ERROR("ioctl failed: %s", strerror(errno));
+        return TSS2_TCTI_RC_IO_ERROR;
+    }
+
+    return TSS2_RC_SUCCESS;
 }
 
 TSS2_RC
