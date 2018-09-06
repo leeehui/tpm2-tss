@@ -71,6 +71,8 @@ typedef void TSS2_TCTI_POLL_HANDLE;
     ((TSS2_TCTI_CONTEXT_COMMON_V1*)tctiContext)->setLocality
 #define TSS2_TCTI_MAKE_STICKY(tctiContext) \
     ((TSS2_TCTI_CONTEXT_COMMON_V2*)tctiContext)->makeSticky
+#define TSS2_TCTI_SKM_DELETE_KEY_SLOT(tctiContext) \
+    ((TSS2_TCTI_CONTEXT_COMMON_V1*)tctiContext)->skmDeleteKeySlot
 
 /* Macros to simplify invocation of functions from the common TCTI structure */
 #define Tss2_Tcti_Transmit(tctiContext, size, command) \
@@ -124,6 +126,13 @@ typedef void TSS2_TCTI_POLL_HANDLE;
     (TSS2_TCTI_MAKE_STICKY(tctiContext) == NULL) ? \
         TSS2_TCTI_RC_NOT_IMPLEMENTED: \
     TSS2_TCTI_MAKE_STICKY(tctiContext)(tctiContext, handle, sticky))
+#define Tss2_Tcti_SkmDeleteKeySlot(tctiContext, index) \
+    ((tctiContext == NULL) ? TSS2_TCTI_RC_BAD_CONTEXT: \
+    (TSS2_TCTI_VERSION(tctiContext) < 1) ? \
+        TSS2_TCTI_RC_ABI_MISMATCH: \
+    (TSS2_TCTI_SKM_DELETE_KEY_SLOT(tctiContext) == NULL) ? \
+        TSS2_TCTI_RC_NOT_IMPLEMENTED: \
+    TSS2_TCTI_SKM_DELETE_KEY_SLOT(tctiContext)(tctiContext, index))
 
 typedef struct TSS2_TCTI_OPAQUE_CONTEXT_BLOB TSS2_TCTI_CONTEXT;
 
@@ -159,6 +168,9 @@ typedef TSS2_RC (*TSS2_TCTI_INIT_FUNC) (
     TSS2_TCTI_CONTEXT *tctiContext,
     size_t *size,
     const char *config);
+typedef TSS2_RC (*TSS2_TCTI_SKM_DELETE_KEY_SLOT_FCN) (
+    TSS2_TCTI_CONTEXT *tctiContext,
+    uint32_t index);
 
 /* superclass to get the version */
 typedef struct {
@@ -178,6 +190,7 @@ typedef struct {
     TSS2_TCTI_CANCEL_FCN cancel;
     TSS2_TCTI_GET_POLL_HANDLES_FCN getPollHandles;
     TSS2_TCTI_SET_LOCALITY_FCN setLocality;
+    TSS2_TCTI_SKM_DELETE_KEY_SLOT_FCN skmDeleteKeySlot;
 } TSS2_TCTI_CONTEXT_COMMON_V1;
 
 typedef struct {

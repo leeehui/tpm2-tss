@@ -187,9 +187,32 @@ tcti_device_get_poll_handles (
 
 #define TPM_IOC_SET_LOCALITY_NR 0x20
 #define TPM_IOC_GET_LOCALITY_NR 0x21
+#define TPM_IOC_SKM_DELETE_KEY_SLOT_NR 0x22
 
 #define TPM_IOC_SET_LOCALITY _IOW(TPM_IOC_TYPE, TPM_IOC_SET_LOCALITY_NR, unsigned long)
 #define TPM_IOC_GET_LOCALITY _IOR(TPM_IOC_TYPE, TPM_IOC_GET_LOCALITY_NR, unsigned long)
+#define TPM_IOC_SKM_DELETE_KEY_SLOT _IOW(TPM_IOC_TYPE, TPM_IOC_SKM_DELETE_KEY_SLOT_NR, unsigned long)
+
+TSS2_RC
+tcti_skm_delete_key_slot (
+    TSS2_TCTI_CONTEXT *tctiContext,
+    uint32_t index)
+{
+    TSS2_TCTI_CONTEXT_INTEL *tcti_intel = tcti_context_intel_cast (tctiContext);
+    TSS2_RC rc;
+
+    rc = tcti_common_checks (tctiContext);
+    if (rc != TSS2_RC_SUCCESS) {
+        return TSS2_TCTI_RC_IO_ERROR;
+    }
+
+    if (ioctl(tcti_intel->devFile, TPM_IOC_SKM_DELETE_KEY_SLOT, index) < 0) {
+        LOG_ERROR("ioctl failed: %s", strerror(errno));
+        return TSS2_TCTI_RC_IO_ERROR;
+    }
+
+    return TSS2_RC_SUCCESS;
+}
 
 TSS2_RC
 tcti_device_set_locality (
@@ -243,6 +266,7 @@ Tss2_Tcti_Device_Init (
     TSS2_TCTI_GET_POLL_HANDLES (tctiContext) = tcti_device_get_poll_handles;
     TSS2_TCTI_SET_LOCALITY (tctiContext) = tcti_device_set_locality;
     TSS2_TCTI_MAKE_STICKY (tctiContext) = tcti_make_sticky_not_implemented;
+    TSS2_TCTI_SKM_DELETE_KEY_SLOT (tctiContext) = tcti_skm_delete_key_slot;
 
     tcti_intel->status.locality = 3;
     tcti_intel->status.commandSent = 0;
